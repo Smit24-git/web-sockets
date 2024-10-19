@@ -1,4 +1,6 @@
 using System.Net.WebSockets;
+using System.Text;
+using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,9 +37,20 @@ app.Use(async(context, next) => {
 
 async Task HandleConnectionAsync(WebSocket webSocket, CancellationToken cancellationToken) {
     var buffer = new byte[1024 * 8];
+    var msg = "{ \"message\": \"Message from Server.\" }";
+    var messageBytes = Encoding.ASCII.GetBytes(msg);
+    await webSocket.SendAsync(
+        new ArraySegment<byte>(messageBytes),
+        WebSocketMessageType.Text,
+        true,
+        CancellationToken.None);
 
     var receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
     while(!receiveResult.CloseStatus.HasValue) {
+        string jsonString  = Encoding.UTF8.GetString(new ArraySegment<byte>(buffer, 0, receiveResult.Count));
+        Object? obj = JsonConvert.DeserializeObject<Object>(jsonString);
+        Console.WriteLine($"Received: {jsonString}");
+
         //send buffer message we received!
 
         //wait for new message
